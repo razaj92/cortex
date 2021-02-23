@@ -135,6 +135,8 @@ type KVConfig struct {
 	GossipNodes         int           `yaml:"gossip_nodes"`
 	GossipToTheDeadTime time.Duration `yaml:"gossip_to_dead_nodes_time"`
 	DeadNodeReclaimTime time.Duration `yaml:"dead_node_reclaim_time"`
+	AdvertiseAddr       string        `yaml:"advertise_addr"`
+	AdvertisePort       int           `yaml:"advertise_port"`
 
 	// List of members to join
 	JoinMembers      flagext.StringSlice `yaml:"join_members"`
@@ -180,6 +182,8 @@ func (cfg *KVConfig) RegisterFlags(f *flag.FlagSet, prefix string) {
 	f.DurationVar(&cfg.PushPullInterval, prefix+"memberlist.pullpush-interval", 0, "How often to use pull/push sync. Uses memberlist LAN defaults if 0.")
 	f.DurationVar(&cfg.GossipToTheDeadTime, prefix+"memberlist.gossip-to-dead-nodes-time", 0, "How long to keep gossiping to dead nodes, to give them chance to refute their death. Uses memberlist LAN defaults if 0.")
 	f.DurationVar(&cfg.DeadNodeReclaimTime, prefix+"memberlist.dead-node-reclaim-time", 0, "How soon can dead node's name be reclaimed with new address. Defaults to 0, which is disabled.")
+	f.StringVar(&cfg.AdvertiseAddr, prefix+"memberlist.advertise-address", "", "Address to advertise to other cluster members")
+	f.IntVar(&cfg.AdvertisePort, prefix+"memberlist.advertise-port", 0, "Port to advertise to cluster members")
 
 	cfg.TCPTransport.RegisterFlags(f, prefix)
 }
@@ -347,6 +351,12 @@ func (m *KV) buildMemberlistConfig() (*memberlist.Config, error) {
 	if m.cfg.RandomizeNodeName {
 		mlCfg.Name = mlCfg.Name + "-" + generateRandomSuffix()
 		level.Info(m.logger).Log("msg", "Using memberlist cluster node name", "name", mlCfg.Name)
+	}
+	if m.cfg.AdvertiseAddr != "" {
+		mlCfg.AdvertiseAddr = m.cfg.AdvertiseAddr
+	}
+	if m.cfg.AdvertisePort != 0 {
+		mlCfg.AdvertisePort = m.cfg.AdvertisePort
 	}
 
 	mlCfg.LogOutput = newMemberlistLoggerAdapter(m.logger, false)
